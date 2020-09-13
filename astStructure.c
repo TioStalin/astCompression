@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "astStructure.h"
 
 node *initNode(char* text){
     node *nodo = malloc(sizeof(node));
     if(nodo){
-      nodo->word = text;
-      nodo->block = 0;
+      strcpy(nodo->word, text);
       nodo->child = NULL;
       nodo->parent = NULL;
       nodo->back = NULL;
@@ -15,12 +15,21 @@ node *initNode(char* text){
     return nodo;
 }
 
-root *initRoot(node *nodo){
+root *initRoot(){
     root *tree = malloc(sizeof(root));
+    tree->nodes = 0;
+    tree->begin = NULL;
+    tree->current = NULL;
+    return tree;
+}
+
+void addToRoot(root *tree, node *nodo){
+    if(tree->begin != NULL){
+        return;
+    }
     tree->nodes = 1;
     tree->begin = nodo;
     tree->current = nodo;
-    return tree;
 }
 
 void rewindTree(root *tree){
@@ -75,6 +84,9 @@ int addNode(root *tree, node *nodo){
     if(tree->current->next != NULL){
       return -1;
     }
+    if(tree->current->parent != NULL){
+      nodo->parent = tree->current->parent;
+    }
     tree->current->next = nodo;
     nodo->back = tree->current;
     tree->current = tree->current->next;
@@ -83,27 +95,38 @@ int addNode(root *tree, node *nodo){
     return 0;
 }
 
-void printTree(root *tree, int aux){
-    if(tree->current->next == NULL && tree->current->child == NULL){
+void printTree(root *tree, int altura){
+    while(tree->current->next != NULL){
+      for(int i = 0; i< altura; i++){
+        printf("|\t");
+      }
+      printf("-> %s\n",tree->current->word);
+      if(tree->current->child != NULL){
+         moveToChild(tree);
+         printTree(tree, altura+1);
+         moveToParent(tree);
+      }
+      nextNode(tree);
+    }
+    for(int i = 0; i< altura; i++){
+      printf("|\t");
+    }
+    printf("-> %s\n", tree->current->word);
+    if(tree->current->child != NULL){
+       moveToChild(tree);
+       printTree(tree, altura+1);
+       moveToParent(tree);
+    }
+    nextNode(tree);
+}
+
+void freeTree(node *nodo){
+    if(nodo == NULL){
       return;
     }
-    if(tree->current->child != NULL){
-      moveToChild(tree);
-      aux = 1;
-      printf(" -> %s %d", tree->current->word, tree->current->block);
-      printTree(tree, aux);
-      moveToParent(tree);
-      aux = 0;
-    }
-    if(tree->current->next != NULL){
-      nextNode(tree);
-      if(aux == 1){
-          printf(" -> %s %d", tree->current->word, tree->current->block);
-      }
-      else{
-          printf("\n-> %s %d", tree->current->word, tree->current->block);
-      }
-      printTree(tree, aux);
-      backNode(tree);
-    }
+
+    freeTree(nodo->next);
+    freeTree(nodo->child);
+
+    free(nodo);
 }

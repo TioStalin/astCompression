@@ -2,8 +2,7 @@
 #define AST_TREE
 
 typedef struct node {
-    char *word;
-    int block;
+    char word[20];
     struct node *child;
     struct node *parent;
     struct node *next;
@@ -18,7 +17,9 @@ typedef struct root {
 
 node *initNode(char* text);
 
-root *initRoot(node *nodo);
+root *initRoot();
+
+void addToRoot(root *tree, node *nodo);
 
 void rewindTree(root *tree);
 
@@ -34,6 +35,8 @@ int addChild(root *tree, node *nodo);
 
 int addNode(root *tree, node *nodo);
 
-void printTree(root *tree, int aux);
+void printTree(root *tree, int altura);
+
+void freeTree(node *nodo);
 
 #endif
