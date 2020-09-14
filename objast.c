@@ -315,8 +315,11 @@ int openDB (char *name){
   fp = fopen(name, "r");
   fgets(texto, sizeof(int), fp);
   DB.nnums = atoi(texto);
+  //Sujeto a Prueba
+  memset(texto, 0, LARGO);
+  //
   index = 0;
-  DB.nums = malloc(sizeof(root)*DB.nnums);
+  DB.nums = malloc(sizeof(root)*(DB.nnums+1));
   while(fgets(texto, LARGO, fp)) {
     root * tree = makeTreeString(texto);
     DB.nums[index] = tree;
@@ -344,7 +347,6 @@ void closeDB (void){
 }
 
 Obj parseobj (char *p){
-    root * new = db(NewObj);
-    new = makeTreeString(p);
+    db(NewObj) = makeTreeString(p);
     return NewObj;
 }
