@@ -2,11 +2,157 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "astStructure.h"
+#include <string.h>
 
 //En este caso los Obj son los roots de los arboles
 
 #define db(p) (DB.nums[p])
+
+#define LARGO 200
+
+
+//Estructura de arbol
+typedef struct node {
+    char word[20];
+    struct node *child;
+    struct node *parent;
+    struct node *next;
+    struct node *back;
+}node;
+
+typedef struct root {
+    int nodes;
+    node *begin;
+    node *current;
+}root;
+
+node *initNode(char* text){
+    node *nodo = malloc(sizeof(node));
+    strcpy(nodo->word, text);
+    nodo->child = NULL;
+    nodo->parent = NULL;
+    nodo->back = NULL;
+    nodo->next = NULL;
+    return nodo;
+}
+
+root *initRoot(){
+    root *tree = malloc(sizeof(root));
+    tree->nodes = 0;
+    tree->begin = NULL;
+    tree->current = NULL;
+    return tree;
+}
+
+void addToRoot(root *tree, node *nodo){
+    if(tree->begin != NULL){
+        return;
+    }
+    tree->nodes = 1;
+    tree->begin = nodo;
+    tree->current = nodo;
+}
+
+void rewindTree(root *tree){
+    tree->current = tree->begin;
+}
+
+int nextNode(root *tree){
+    if(tree->current->next == NULL){
+        return -1;
+    }
+    tree->current = tree->current->next;
+    return 0;
+}
+
+
+int backNode(root *tree){
+    if(tree->current->back == NULL){
+        return -1;
+    }
+    tree->current = tree->current->back;
+    return 0;
+}
+
+int moveToChild(root *tree){
+    if(tree->current->child == NULL){
+        return -1;
+    }
+    tree->current = tree->current->child;
+    return 0;
+}
+
+int moveToParent(root *tree){
+  if(tree->current->parent == NULL){
+      return -1;
+  }
+  tree->current = tree->current->parent;
+  return 0;
+}
+
+int addChild(root *tree, node *nodo){
+    if(tree->current->child != NULL){
+      return -1;
+    }
+    tree->current->child = nodo;
+    nodo->parent = tree->current;
+    tree->current = tree->current->child;
+    tree->nodes++;
+    return 0;
+}
+
+int addNode(root *tree, node *nodo){
+    if(tree->current->next != NULL){
+      return -1;
+    }
+    if(tree->current->parent != NULL){
+      nodo->parent = tree->current->parent;
+    }
+    tree->current->next = nodo;
+    nodo->back = tree->current;
+    tree->current = tree->current->next;
+    tree->nodes++;
+
+    return 0;
+}
+
+void printTree(root *tree, int altura){
+    while(tree->current->next != NULL){
+      for(int i = 0; i< altura; i++){
+        printf("|\t");
+      }
+      printf("-> %s\n",tree->current->word);
+      if(tree->current->child != NULL){
+         moveToChild(tree);
+         printTree(tree, altura+1);
+         moveToParent(tree);
+      }
+      nextNode(tree);
+    }
+    for(int i = 0; i< altura; i++){
+      printf("|\t");
+    }
+    printf("-> %s\n", tree->current->word);
+    if(tree->current->child != NULL){
+       moveToChild(tree);
+       printTree(tree, altura+1);
+       moveToParent(tree);
+    }
+    nextNode(tree);
+}
+
+void freeTree(node *nodo){
+    if(nodo == NULL){
+      return;
+    }
+
+    freeTree(nodo->next);
+    freeTree(nodo->child);
+
+    free(nodo);
+}
+
+//
 
 static int never = 1;
 
@@ -16,6 +162,91 @@ typedef struct sAstDB{
 } astDB;
 
 static astDB DB;
+
+//Hace un Obj a partir de un string de arbol.
+root *makeTreeString(char* texto){
+    root* tree = initRoot();
+    int altura, anterior, index;
+    altura = 0;
+    anterior = 0;
+    index = 0;
+    node* nodo;
+    char word[20];
+    for(int i = 0; i < strlen(texto); i++){
+        if(texto[i] == ','){
+            nodo = initNode(word);
+            if(tree->begin == NULL){
+                addToRoot(tree, nodo);
+                index = 0;
+                memset(word, 0, 20);
+                continue;
+            }
+            if(altura == anterior){
+                addNode(tree, nodo);
+            }
+            else if(altura-anterior < 0){
+                for(int j = 0; j < anterior-altura; j++){
+                    moveToParent(tree);
+                }
+                addNode(tree, nodo);
+            }
+            else{
+                addChild(tree, nodo);
+            }
+            anterior = altura;
+            index = 0;
+            memset(word, 0, 20);
+        }
+        else if(texto[i] == '('){
+            nodo = initNode(word);
+            if(altura == anterior){
+                addNode(tree, nodo);
+            }
+            else if(altura-anterior < 0){
+                for(int j = 0; j < anterior-altura; j++){
+                    moveToParent(tree);
+                }
+                addNode(tree, nodo);
+            }
+            else{
+                addChild(tree, nodo);
+            }
+            anterior = altura;
+            altura++;
+            index = 0;
+            memset(word, 0, 20);
+        }
+        else if(texto[i] == ')'){
+            if(texto[i-1] == ')'){
+              altura--;
+              continue;
+            }
+            nodo = initNode(word);
+            if(altura == anterior){
+                addNode(tree, nodo);
+            }
+            else if(altura-anterior < 0){
+                for(int j = 0; j < anterior-altura; j++){
+                    moveToParent(tree);
+                }
+                addNode(tree, nodo);
+            }
+            else{
+                addChild(tree, nodo);
+            }
+
+            anterior = altura;
+            altura--;
+            index = 0;
+            memset(word, 0, 20);
+        }
+        else{
+            word[index] = texto[i];
+            index++;
+        }
+    }
+    return tree;
+}
 
 int faltantes(node* nodo){
       if(nodo == NULL){
@@ -37,10 +268,10 @@ int ted(node* nodo1, node* nodo2){
         }
     }
     if(strcmp(nodo1->word, nodo2->word)){
-        return levenshtein(nodo1->next,nodo2->next) + identicalTrees(nodo1->child,nodo2->child) + 1;
+        return ted(nodo1->next,nodo2->next) + ted(nodo1->child,nodo2->child) + 1;
     }
     else{
-        return levenshtein(nodo1->next,nodo2->next) + identicalTrees(nodo1->child,nodo2->child);
+        return ted(nodo1->next,nodo2->next) + ted(nodo1->child,nodo2->child);
     }
 }
 
@@ -51,15 +282,23 @@ int ted(node* nodo1, node* nodo2){
 /*
 Calcula la distancia entre un arbol y otro.
 Se proponen 3 tipos de distancias:
-levenshtein: Que verifica el insert, delete y el modify.
-LCS: Este solo tiene insert y delete. Para casos de modify tiene que eliminar y agregar otra vez.
+ted: Que verifica el insert, delete y el modify.
 levenshteinModificated: Al igual que el anterior pero que en modify verifique el levenshtein
 de los strings que contiene, asi tener una distancia mas comparativa.
+LCS: Este solo tiene insert y delete. Para casos de modify tiene que eliminar y agregar otra vez.
 
 Al sumar, tratar de dejar un valor constante al 1, de tal manera que si cada regla tiene peso distinto.
 */
 
-int distanceInter (Obj o1, Obj o2){
+//Muestra la forma del arbol en consola
+void printobj (Obj obj){
+    root *tree = db(obj);
+    rewindTree(tree);
+    printTree(tree, 0);
+    printf("\n");
+}
+
+Tdist distanceInter (Obj o1, Obj o2){
     return ted(db(o1)->begin,db(o2)->begin);
     //return LCS(db(o1),db(o2));
     //return levenshteinModificated(db(o1),db(o2));
@@ -67,52 +306,24 @@ int distanceInter (Obj o1, Obj o2){
 
 //Dado un archivo, crea los arboles que existen y los deja en DB
 int openDB (char *name){
-    FILE *fp;
-    int altura, index;
-    int anterior = 0;
-    char texto[20];
-    node* nodo;
-    index = -1;
+  FILE *fp;
+  int index;
+  char texto[LARGO];
 
-    //Tenemos que liberar antes de poder abrir, la libreria asi lo especifica
-    closeDB();
+  closeDB();
 
-    //Hace un arreglo de root que contienen los arboles, todo a partir del nombre del archivo
-    fp = fopen(name, "r");
-    fscanf(fp, "%d", &DB.nnums);
-    DB.nums = malloc(sizeof(root)*DB.nnums);
-    while(fscanf(fp, "%d %s", &altura, texto) != -1){
-        if(altura == -1 && !strcmp(texto, "EOF")){
-            index++;
-            DB.nums[index] = initRoot();
-            continue;
-        }
-        nodo = initNode(texto);
-        if(DB.nums[index]->begin == NULL){
-            addToRoot(DB.nums[index], nodo);
-            continue;
-        }
-        else{
-            if(anterior == altura){
-                addNode(DB.nums[index], nodo);
-            }
-            else if(altura-anterior < 0){
-                for(int i = 0; i<anterior-altura; i++){
-                    moveToParent(DB.nums[index]);
-                }
-                addNode(DB.nums[index], nodo);
-            }
-            else{
-                addChild(DB.nums[index], nodo);
-            }
-            anterior = altura;
-        }
-    }
-    fclose(fp);
-    for(int i = 0; i < DB.nnums; i++){
-      rewindTree(DB.nums[i]);
-    }
-    return DB.nnums;
+  fp = fopen(name, "r");
+  fgets(texto, sizeof(int), fp);
+  DB.nnums = atoi(texto);
+  index = 0;
+  DB.nums = malloc(sizeof(root)*DB.nnums);
+  while(fgets(texto, LARGO, fp)) {
+    root * tree = makeTreeString(texto);
+    DB.nums[index] = tree;
+    index++;
+  }
+  fclose(fp);
+  return DB.nnums;
 }
 
 //Libera toda la memoria solicitada con malloc, desde los nodos, el root y la db
@@ -133,13 +344,7 @@ void closeDB (void){
 }
 
 Obj parseobj (char *p){
-    //TODO: Aprender que hace esto xd
+    root * new = db(NewObj);
+    new = makeTreeString(p);
     return NewObj;
-}
-
-//Muestra la forma del arbol en consola
-void printobj (Obj obj){
-    rewindTree(obj);
-    printTree(obj, 0);
-    printf("\n");
 }
